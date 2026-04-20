@@ -1,0 +1,7 @@
+Python é uma linguagem de programação de alto nível, interpretada, de script, imperativa, orientada a objetos, funcional, de tipagem dinâmica e forte. Foi lançada por Guido van Rossum em 1991.
+
+Python permite trabalhar com múltiplos paradigmas de programação, incluindo programação orientada a objetos, programação imperativa, programação funcional e programação procedural.
+
+A sintaxe do Python é limpa e legível, o que a torna uma excelente linguagem para iniciantes em programação.
+
+Python é amplamente utilizado em ciência de dados, inteligência artificial, automação, desenvolvimento web e scripts de sistema.

@@ -1,0 +1,15 @@
+# Requisitos mínimos para Grok-Advanced-BR-Base
+# Projeto leve para rodar em notebooks fracos (4GB RAM)
+
+# Interface simples e leve
+gradio>=4.0.0
+
+# Para embeddings leves (modelo pequeno) ou TF-IDF como fallback
+sentence-transformers>=2.2.0
+
+# Utilitários básicos (já vem com Python na maioria dos casos)
+numpy>=1.21.0
+scikit-learn>=1.0.0  # Para TF-IDF e similaridade de cosseno
+
+# Opcional: suporte a PDF (descomente se precisar)
+# pypdf>=3.0.0

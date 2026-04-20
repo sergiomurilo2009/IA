@@ -1,0 +1,10 @@
+Inteligência Artificial (IA) é a simulação de processos de inteligência humana por máquinas, especialmente sistemas de computador.
+
+Os principais tipos de IA incluem:
+- IA fraca ou estreita: projetada para tarefas específicas
+- IA forte ou geral: capacidade cognitiva equivalente à humana
+- Superinteligência: supera a inteligência humana
+
+Machine Learning (Aprendizado de Máquina) é um subcampo da IA que permite aos sistemas aprenderem e melhorarem automaticamente com base em experiência.
+
+Deep Learning usa redes neurais artificiais com múltiplas camadas para modelar padrões complexos.
