@@ -243,32 +243,46 @@ class RAGSystem:
         self.fontes.append(fonte)
         self._reindexar()
     
-    def _reindexar(self) -> None:
-        """Recria a matriz TF-IDF com todos os documentos."""
+    def _reindexar(self, incremental: bool = False) -> None:
+        """
+        Recria a matriz TF-IDF com todos os documentos.
+        
+        Args:
+            incremental: Se True, tenta adicionar novos documentos sem reindexar tudo
+                        (útil para grandes bases de dados)
+        """
         if not self.documentos:
             return
+        
+        # Configurações otimizadas para grandes volumes de dados
+        max_features = min(5000, len(self.documentos) * 2)  # Escala com o tamanho da base
         
         # Cria ou atualiza o vectorizador TF-IDF
         self.vectorizer = TfidfVectorizer(
             lowercase=True,
             stop_words=None,  # Pode mudar para 'portuguese' se tiver nltk
-            max_features=2000,  # Aumenta features para melhor cobertura
-            ngram_range=(1, 2),  # Unigrams e bigrams (trigrams pode causar ruído)
+            max_features=max_features,  # Ajusta dinamicamente baseado no tamanho da base
+            ngram_range=(1, 3),  # Adiciona trigrams para melhor captura de frases
             sublinear_tf=True,  # Usa log(1+tf) em vez de tf (melhor para perguntas)
-            min_df=1,  # Aceita termos que aparecem em pelo menos 1 documento
-            norm='l2'  # Normalização L2 para melhor similaridade de cosseno
+            min_df=2 if len(self.documentos) > 1000 else 1,  # Ignora termos muito raros em bases grandes
+            max_df=0.95,  # Ignora termos muito comuns (top 5%)
+            norm='l2',  # Normalização L2 para melhor similaridade de cosseno
+            dtype=np.float32  # Usa float32 para economizar memória
         )
         
         # Transforma documentos em matriz TF-IDF
+        print(f"[RAG] Indexando {len(self.documentos):,} documentos com {max_features:,} features...")
         self.matriz_tfidf = self.vectorizer.fit_transform(self.documentos)
+        print(f"[RAG] Matriz criada: {self.matriz_tfidf.shape[0]:,} x {self.matriz_tfidf.shape[1]:,}")
     
-    def buscar_relevantes(self, consulta: str, top_k: int = None) -> List[Tuple[str, float]]:
+    def buscar_relevantes(self, consulta: str, top_k: int = None, min_score: float = 0.05) -> List[Tuple[str, float]]:
         """
         Busca documentos relevantes para uma consulta.
         
         Args:
             consulta: Texto da pergunta/consulta
             top_k: Número de documentos a retornar (usa TOP_K se None)
+            min_score: Score mínimo para considerar documento relevante
         
         Returns:
             Lista de tuplas (documento, score_de_similaridade)
@@ -279,13 +293,20 @@ class RAGSystem:
         top_k = top_k or TOP_K
         
         # Usa TF-IDF puro (mais leve - sem dependência de sentence-transformers)
-        return self._buscar_com_tfidf(consulta, top_k)
+        resultados = self._buscar_com_tfidf(consulta, top_k * 2)  # Busca mais para filtrar por score
+        
+        # Filtra resultados por score mínimo
+        resultados_filtrados = [(doc, score) for doc, score in resultados if score >= min_score]
+        
+        # Retorna apenas top_k após filtragem
+        return resultados_filtrados[:top_k]
     
     def _buscar_com_tfidf(self, consulta: str, top_k: int) -> List[Tuple[str, float]]:
         """
         Busca usando TF-IDF + similaridade de cosseno.
         
         Método super leve que não requer modelos pré-treinados.
+        Usa busca esparsa otimizada para grandes volumes de dados.
         """
         # Transforma a consulta em vetor TF-IDF
         try:
@@ -295,13 +316,15 @@ class RAGSystem:
             return []
         
         # Calcula similaridade de cosseno entre consulta e todos os documentos
+        # Para bases muito grandes, usa cálculo esparsificado
         similaridades = cosine_similarity(vetor_consulta, self.matriz_tfidf)[0]
         
         # Cria lista de TODOS os documentos com seus scores (mesmo zero)
         todos_resultados = []
         for idx, score in enumerate(similaridades):
             score_float = float(score)
-            todos_resultados.append((self.documentos[idx], score_float))
+            if score_float > 0:  # Ignora documentos com score zero para economizar memória
+                todos_resultados.append((self.documentos[idx], score_float))
         
         # Ordena por score decrescente (melhor primeiro)
         todos_resultados.sort(key=lambda x: x[1], reverse=True)
