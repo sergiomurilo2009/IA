@@ -145,7 +145,8 @@ def create_graph(
 
 def initialize_system_with_samples() -> tuple:
     """
-    Inicializa o sistema com documentos de exemplo.
+    Inicializa o sistema com documentos de exemplo e carrega automaticamente
+    o chat_pt.jsonl da pasta "banco de dados" se existir.
     
     Returns:
         Tupla com (grafo, vectorstore)
@@ -171,10 +172,113 @@ def initialize_system_with_samples() -> tuple:
         count = vectorstore.get_document_count()
         print(f"\n[Graph] Banco já contém {count} documentos.")
     
+    # Carregar automaticamente chat_pt.jsonl da pasta "banco de dados"
+    _load_chat_dataset_automatically(vectorstore)
+    
     # Criar grafo
     graph = create_graph(vectorstore=vectorstore, verbose=True)
     
     return graph, vectorstore
+
+
+def _load_chat_dataset_automatically(vectorstore: VectorStoreManager):
+    """
+    Carrega automaticamente o chat_pt.jsonl da pasta "banco de dados".
+    
+    Args:
+        vectorstore: Instância do VectorStoreManager para adicionar documentos
+    """
+    import json
+    from pathlib import Path
+    
+    # Caminho para a pasta "banco de dados"
+    base_dir = Path(__file__).parent.parent.parent
+    database_dir = base_dir / "banco de dados"
+    
+    # Procurar por chat_pt.jsonl
+    jsonl_file = database_dir / "chat_pt.jsonl"
+    
+    if not jsonl_file.exists():
+        print(f"[Graph] Arquivo chat_pt.jsonl não encontrado em {jsonl_file}")
+        print(f"[Graph] Dica: Coloque seu arquivo chat_pt.jsonl na pasta 'banco de dados' para treinamento automático.")
+        return
+    
+    print("\n" + "=" * 60)
+    print("CARREGANDO DATASET DE CHAT PARA TREINAMENTO")
+    print("=" * 60)
+    print(f"Arquivo: {jsonl_file}")
+    
+    try:
+        # Carregar dados do JSONL
+        print("[Graph] Lendo arquivo JSONL...")
+        documents = []
+        loader = DocumentLoader()
+        
+        with open(jsonl_file, 'r', encoding='utf-8') as f:
+            for idx, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                try:
+                    data = json.loads(line)
+                    
+                    # Extrair conteúdo
+                    content = None
+                    for field in ['content', 'text', 'message', 'prompt', 'response', 'answer']:
+                        if field in data and isinstance(data[field], str):
+                            content = data[field]
+                            break
+                    
+                    if not content:
+                        text_parts = []
+                        for key, value in data.items():
+                            if isinstance(value, str):
+                                text_parts.append(f"{key}: {value}")
+                        content = "\n".join(text_parts) if text_parts else str(data)
+                    
+                    # Extrair metadados
+                    metadata = {"source": "chat_pt.jsonl", "index": idx}
+                    for key, value in data.items():
+                        if key not in ['content', 'text', 'message', 'prompt', 'response', 'answer']:
+                            metadata[key] = value
+                    
+                    # Criar documento
+                    doc = loader.load_string(
+                        content=content,
+                        metadata=metadata,
+                        doc_id=f"chat_{idx:06d}"
+                    )
+                    documents.append(doc)
+                    
+                    # Progresso a cada 100 documentos
+                    if idx % 100 == 0:
+                        print(f"[Graph] Processados {idx} entradas...")
+                        
+                except json.JSONDecodeError as e:
+                    print(f"[Graph] Erro na linha {idx}: {e}")
+                    continue
+        
+        print(f"[Graph] {len(documents)} documentos processados do chat_pt.jsonl")
+        
+        # Adicionar ao vector store
+        if documents:
+            print("[Graph] Adicionando documentos ao vector store...")
+            vectorstore.add_documents(documents)
+            
+            final_count = vectorstore.get_document_count()
+            
+            print("\n" + "=" * 60)
+            print("✅ CARREGAMENTO DO DATASET CONCLUÍDO!")
+            print("=" * 60)
+            print(f"Documentos do chat adicionados: {len(documents)}")
+            print(f"Total no banco: {final_count}")
+            print("=" * 60 + "\n")
+        
+    except Exception as e:
+        print(f"\n[Graph] ❌ ERRO ao carregar dataset: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def process_query(
