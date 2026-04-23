@@ -108,6 +108,9 @@ def load_dataset_text(filepath: str, format: str = 'jsonl') -> str:
     
     all_text = []
     
+    # Chaves possíveis para conteúdo de mensagem
+    content_keys = ['content', 'text', 'value', 'body']
+    
     if format == 'jsonl':
         with open(filepath, 'r', encoding='utf-8') as f:
             for i, line in enumerate(f):
@@ -115,6 +118,8 @@ def load_dataset_text(filepath: str, format: str = 'jsonl') -> str:
                     data = json.loads(line.strip())
                     
                     text_found = False
+                    
+                    # Caso 1: Chaves diretas na raiz (ex: {"text": "..."})
                     for col in JSONL_TEXT_COLUMNS:
                         if col in data:
                             value = data[col]
@@ -123,11 +128,44 @@ def load_dataset_text(filepath: str, format: str = 'jsonl') -> str:
                                 text_found = True
                                 break
                     
+                    # Caso 2: Estrutura com 'messages' (ex: {"messages": [{"role": "...", "content": "..."}]})
+                    if not text_found and 'messages' in data and isinstance(data['messages'], list):
+                        conversation_parts = []
+                        for msg in data['messages']:
+                            if isinstance(msg, dict):
+                                # Tenta encontrar conteúdo em chaves comuns
+                                for key in content_keys:
+                                    if key in msg and isinstance(msg[key], str):
+                                        conversation_parts.append(msg[key])
+                                        text_found = True
+                                        break
+                                # Fallback: se não achou chaves padrão, pega qualquer string
+                                if not text_found:
+                                    for v in msg.values():
+                                        if isinstance(v, str) and len(v) > 5:
+                                            conversation_parts.append(v)
+                                            text_found = True
+                                            break
+                        
+                        if conversation_parts:
+                            all_text.append(" ".join(conversation_parts))
+                    
+                    # Caso 3: Fallback genérico - tenta achar qualquer string longa no dict
                     if not text_found and isinstance(data, dict):
                         for key, value in data.items():
                             if isinstance(value, str) and len(value) > 10:
                                 all_text.append(value)
+                                text_found = True
                                 break
+                            # Também verifica listas dentro do dict
+                            elif isinstance(value, list):
+                                for item in value:
+                                    if isinstance(item, str) and len(item) > 10:
+                                        all_text.append(item)
+                                        text_found = True
+                                        break
+                                if text_found:
+                                    break
                 
                 except json.JSONDecodeError:
                     continue
@@ -140,7 +178,7 @@ def load_dataset_text(filepath: str, format: str = 'jsonl') -> str:
             all_text = f.readlines()
     
     full_text = '\n'.join(all_text)
-    print(f"✓ Dataset carregado: {len(full_text):,} caracteres")
+    print(f"✓ Dataset carregado: {len(full_text):,} caracteres, {len(all_text):,} exemplos")
     
     return full_text
 
