@@ -237,11 +237,11 @@ class Trainer:
         """
         if step < self.warmup_steps:
             # Warmup linear
-            return self.optimizer.defaults['lr'][0] * (step + 1) / self.warmup_steps
+            return self.optimizer.defaults['lr'] * (step + 1) / self.warmup_steps
         else:
             # Cosine decay
             progress = (step - self.warmup_steps) / (total_steps - self.warmup_steps)
-            return self.optimizer.defaults['lr'][0] * 0.5 * (1 + math.cos(math.pi * progress))
+            return self.optimizer.defaults['lr'] * 0.5 * (1 + math.cos(math.pi * progress))
     
     def train_epoch(
         self,
