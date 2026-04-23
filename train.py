@@ -268,13 +268,16 @@ class Trainer:
         Warmup: LR aumenta linearmente de 0 até lr_max em warmup_steps
         Decay: LR diminui seguindo cosseno até 0 no final
         """
+        # Obtém o learning rate base do optimizer (é um float)
+        base_lr = self.optimizer.defaults['lr']
+        
         if step < self.warmup_steps:
             # Warmup linear
-            return self.optimizer.defaults['lr'] * (step + 1) / self.warmup_steps
+            return base_lr * (step + 1) / self.warmup_steps
         else:
             # Cosine decay
             progress = (step - self.warmup_steps) / (total_steps - self.warmup_steps)
-            return self.optimizer.defaults['lr'] * 0.5 * (1 + math.cos(math.pi * progress))
+            return base_lr * 0.5 * (1 + math.cos(math.pi * progress))
     
     def train_epoch(
         self,
