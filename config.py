@@ -10,7 +10,7 @@ import os
 # Exemplos:
 #   - Se estiver na pasta Downloads: r"C:\Users\SEU_USUARIO\Downloads\chat_pt.jsonl"
 #   - Se estiver numa pasta do projeto: r".\data\chat_pt.jsonl"
-DATASET_PATH = r"C:\Users\sergi\Downloads\chat_pt.jsonl"  # <--- CAMINHO ATUALIZADO
+DATASET_PATH = r"C:\Users\sergi\Downloads\chat_pt.jsonl"  # <--- CAMINHO ATUALIZADO PARA SEU USUÁRIO
 
 # Formato do dataset: 'jsonl' ou 'txt'
 DATASET_FORMAT = 'jsonl'
