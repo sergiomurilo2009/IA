@@ -127,6 +127,30 @@ def load_dataset_text(filepath: str, format: str = 'jsonl') -> str:
                                 all_text.append(value)
                                 text_found = True
                                 break
+                            elif isinstance(value, list):
+                                # Pode ser uma lista de mensagens ou conversas
+                                found_in_list = False
+                                for item in value:
+                                    if isinstance(item, str):
+                                        all_text.append(item)
+                                        found_in_list = True
+                                    elif isinstance(item, dict):
+                                        # Tenta encontrar conteúdo em chaves comuns
+                                        for key in content_keys:
+                                            if key in item and isinstance(item[key], str):
+                                                all_text.append(item[key])
+                                                found_in_list = True
+                                                break
+                                        # Fallback: pega qualquer string longa no dict
+                                        if not found_in_list:
+                                            for v in item.values():
+                                                if isinstance(v, str) and len(v) > 5:
+                                                    all_text.append(v)
+                                                    found_in_list = True
+                                                    break
+                                if found_in_list:
+                                    text_found = True
+                                break
                     
                     # Caso 2: Estrutura com 'messages' (ex: {"messages": [{"role": "...", "content": "..."}]})
                     if not text_found and 'messages' in data and isinstance(data['messages'], list):
@@ -159,12 +183,21 @@ def load_dataset_text(filepath: str, format: str = 'jsonl') -> str:
                                 break
                             # Também verifica listas dentro do dict
                             elif isinstance(value, list):
+                                found_in_list = False
                                 for item in value:
                                     if isinstance(item, str) and len(item) > 10:
                                         all_text.append(item)
-                                        text_found = True
+                                        found_in_list = True
                                         break
-                                if text_found:
+                                    elif isinstance(item, dict):
+                                        # Tenta extrair texto de dicts dentro da lista
+                                        for k in content_keys:
+                                            if k in item and isinstance(item[k], str) and len(item[k]) > 10:
+                                                all_text.append(item[k])
+                                                found_in_list = True
+                                                break
+                                if found_in_list:
+                                    text_found = True
                                     break
                 
                 except json.JSONDecodeError:

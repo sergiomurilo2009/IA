@@ -304,12 +304,16 @@ def load_dataset(filepath: str, format: str = 'jsonl') -> str:
                                 text_found = True
                             elif isinstance(value, list):
                                 # Pode ser uma lista de mensagens
+                                found_in_list = False
                                 for item in value:
                                     if isinstance(item, str):
                                         all_text.append(item)
+                                        found_in_list = True
                                     elif isinstance(item, dict) and 'text' in item:
                                         all_text.append(item['text'])
-                                text_found = True
+                                        found_in_list = True
+                                if found_in_list:
+                                    text_found = True
                             break
                     
                     # Se nenhuma coluna configurada encontrada, tenta qualquer campo de texto
